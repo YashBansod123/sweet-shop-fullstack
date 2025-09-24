@@ -85,4 +85,28 @@ it('should return a list of all sweets for an authenticated user', async () => {
   expect(res.body.length).toBe(2);
   expect(res.body[0].name).toBe('Jalebi');
 });
+// Add this new 'it' block inside your describe block
+
+it('should search for sweets by name', async () => {
+  // Setup: Create some sweets to search through
+  await request(app)
+    .post('/api/sweets')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Jalebi', category: 'Classic', price: 2.50, quantity: 100 });
+
+  await request(app)
+    .post('/api/sweets')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Gulab Jamun', category: 'Syrup-based', price: 3.00, quantity: 50 });
+
+  // Action: Search for a sweet
+  const res = await request(app)
+    .get('/api/sweets/search?name=Gulab') // Use query parameter for search
+    .set('Authorization', `Bearer ${token}`);
+
+  // Assertions
+  expect(res.statusCode).toEqual(200);
+  expect(res.body.length).toBe(1);
+  expect(res.body[0].name).toBe('Gulab Jamun');
+});
 });

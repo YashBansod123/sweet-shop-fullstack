@@ -42,6 +42,17 @@ router.get('/', authMiddleware, (req, res) => {
     res.status(200).json(rows);
   });
 });
-// -------------------------
+// GET /api/sweets/search - Search for sweets
+router.get('/search', authMiddleware, (req, res) => {
+  const { name } = req.query; // Get search term from query params
+  const sql = `SELECT * FROM sweets WHERE name LIKE ?`;
+  const params = [`%${name}%`]; // Use % for partial matching
 
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.status(200).json(rows);
+  });
+});
 module.exports = router;
