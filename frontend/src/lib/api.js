@@ -27,4 +27,40 @@ export const loginUser = async (userData) => {
   }
 };
 
+// Add this function to frontend/src/lib/api.js
+
+export const getSweets = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+
+    const response = await apiClient.get('/sweets', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch sweets:", error);
+    throw error.response ? error.response.data : new Error('API request failed');
+  }
+};
+// Add this function to frontend/src/lib/api.js
+
+export const addSweet = async (sweetData) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+
+    const response = await apiClient.post('/sweets', sweetData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
 // You will add more functions here later (e.g., getSweets, purchaseSweet)

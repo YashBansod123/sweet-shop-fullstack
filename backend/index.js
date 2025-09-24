@@ -1,8 +1,11 @@
 const express = require('express');
+const cors = require('cors');
 const app = express();
 const PORT = 3001;
 const authRoutes = require('./routes/auth.routes'); // Import the router
 const sweetsRoutes = require('./routes/sweets.routes'); // 1. Import sweets routes
+
+app.use(cors());
 
 app.use(express.json());
 
