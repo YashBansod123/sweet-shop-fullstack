@@ -109,4 +109,38 @@ it('should search for sweets by name', async () => {
   expect(res.body.length).toBe(1);
   expect(res.body[0].name).toBe('Gulab Jamun');
 });
+// Add this new 'it' block inside your describe block
+
+it('should update an existing sweet', async () => {
+  // Setup: First, create a sweet to get its ID
+  const postRes = await request(app)
+    .post('/api/sweets')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Kaju Katli', category: 'Classic', price: 5.00, quantity: 30 });
+
+  const sweetId = postRes.body.id;
+  const updatedData = { price: 5.50, quantity: 25 };
+
+  // Action: Send a PUT request to update the sweet
+  const res = await request(app)
+    .put(`/api/sweets/${sweetId}`)
+    .set('Authorization', `Bearer ${token}`)
+    .send(updatedData);
+
+  // Assertions for the response
+  expect(res.statusCode).toEqual(200);
+  expect(res.body.price).toBe(updatedData.price);
+  expect(res.body.quantity).toBe(updatedData.quantity);
+
+  // Bonus Assertion: Verify directly in the database
+  const db = new sqlite3.Database('./sweets.db');
+  const sweetFromDb = await new Promise((resolve, reject) => {
+    db.get('SELECT * FROM sweets WHERE id = ?', [sweetId], (err, row) => {
+      if (err) reject(err);
+      resolve(row);
+    });
+  });
+  db.close();
+  expect(sweetFromDb.price).toBe(updatedData.price);
+});
 });

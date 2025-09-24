@@ -54,5 +54,25 @@ router.get('/search', authMiddleware, (req, res) => {
     }
     res.status(200).json(rows);
   });
+  // PUT /api/sweets/:id - Update a sweet
+router.put('/:id', authMiddleware, (req, res) => {
+  const { price, quantity } = req.body;
+  const { id } = req.params;
+
+  const sql = `UPDATE sweets SET price = ?, quantity = ? WHERE id = ?`;
+
+  db.run(sql, [price, quantity, id], function(err) {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    // After updating, fetch the updated sweet to return it
+    db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.status(200).json(row);
+    });
+  });
+});
 });
 module.exports = router;
