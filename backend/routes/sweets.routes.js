@@ -9,81 +9,76 @@ const db = new sqlite3.Database('./sweets.db');
 // POST /api/sweets - Add a new sweet
 router.post('/', authMiddleware, (req, res) => {
   const { name, category, price, quantity } = req.body;
-
   if (!name || !price || !quantity) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-
   const sql = `INSERT INTO sweets (name, category, price, quantity) VALUES (?, ?, ?, ?)`;
-
   db.run(sql, [name, category, price, quantity], function(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.status(201).json({
-      id: this.lastID,
-      name,
-      category,
-      price,
-      quantity
-    });
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.status(201).json({ id: this.lastID, name, category, price, quantity });
   });
 });
 
-// --- Add this new route ---
 // GET /api/sweets - Get all sweets
 router.get('/', authMiddleware, (req, res) => {
   const sql = `SELECT * FROM sweets`;
-
   db.all(sql, [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
+    if (err) return res.status(500).json({ error: 'Database error' });
     res.status(200).json(rows);
   });
 });
+
 // GET /api/sweets/search - Search for sweets
 router.get('/search', authMiddleware, (req, res) => {
-  const { name } = req.query; // Get search term from query params
+  const { name } = req.query;
   const sql = `SELECT * FROM sweets WHERE name LIKE ?`;
-  const params = [`%${name}%`]; // Use % for partial matching
-
+  const params = [`%${name}%`];
   db.all(sql, params, (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
+    if (err) return res.status(500).json({ error: 'Database error' });
     res.status(200).json(rows);
   });
-  // PUT /api/sweets/:id - Update a sweet
+});
+
+// POST /api/sweets/:id/purchase - Purchase a sweet
+router.post('/:id/purchase', authMiddleware, (req, res) => {
+    const { id } = req.params;
+    const { quantity: quantityToPurchase } = req.body;
+
+    db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, sweet) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (!sweet) return res.status(404).json({ error: 'Sweet not found' });
+        if (sweet.quantity < quantityToPurchase) {
+            return res.status(400).json({ error: 'Not enough stock' });
+        }
+        const newQuantity = sweet.quantity - quantityToPurchase;
+        const sql = `UPDATE sweets SET quantity = ? WHERE id = ?`;
+        db.run(sql, [newQuantity, id], function(err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.status(200).json({ ...sweet, quantity: newQuantity });
+        });
+    });
+});
+
+// PUT /api/sweets/:id - Update a sweet
 router.put('/:id', authMiddleware, (req, res) => {
   const { price, quantity } = req.body;
   const { id } = req.params;
-
   const sql = `UPDATE sweets SET price = ?, quantity = ? WHERE id = ?`;
-
   db.run(sql, [price, quantity, id], function(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    // After updating, fetch the updated sweet to return it
+    if (err) return res.status(500).json({ error: 'Database error' });
     db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+      if (err) return res.status(500).json({ error: 'Database error' });
       res.status(200).json(row);
     });
   });
 });
 
+// DELETE /api/sweets/:id - Delete a sweet
 router.delete('/:id', authMiddleware, (req, res) => {
   const { id } = req.params;
   const sql = `DELETE FROM sweets WHERE id = ?`;
-
   db.run(sql, id, function(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    // Check if a row was actually deleted
+    if (err) return res.status(500).json({ error: 'Database error' });
     if (this.changes === 0) {
       return res.status(404).json({ message: 'Sweet not found' });
     }
@@ -91,5 +86,4 @@ router.delete('/:id', authMiddleware, (req, res) => {
   });
 });
 
-});
 module.exports = router;
