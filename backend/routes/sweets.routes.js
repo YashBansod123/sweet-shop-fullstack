@@ -1,7 +1,7 @@
-// backend/routes/sweets.routes.js
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth.middleware');
+const adminMiddleware = require('../middleware/admin.middleware');
 const sqlite3 = require('sqlite3');
 
 const db = new sqlite3.Database('./sweets.db');
@@ -43,7 +43,6 @@ router.get('/search', authMiddleware, (req, res) => {
 router.post('/:id/purchase', authMiddleware, (req, res) => {
     const { id } = req.params;
     const { quantity: quantityToPurchase } = req.body;
-
     db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, sweet) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         if (!sweet) return res.status(404).json({ error: 'Sweet not found' });
@@ -51,6 +50,22 @@ router.post('/:id/purchase', authMiddleware, (req, res) => {
             return res.status(400).json({ error: 'Not enough stock' });
         }
         const newQuantity = sweet.quantity - quantityToPurchase;
+        const sql = `UPDATE sweets SET quantity = ? WHERE id = ?`;
+        db.run(sql, [newQuantity, id], function(err) {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            res.status(200).json({ ...sweet, quantity: newQuantity });
+        });
+    });
+});
+
+// POST /api/sweets/:id/restock - Restock a sweet (Admin Only)
+router.post('/:id/restock', [authMiddleware, adminMiddleware], (req, res) => {
+    const { id } = req.params;
+    const { quantity: quantityToAdd } = req.body;
+    db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, sweet) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (!sweet) return res.status(404).json({ error: 'Sweet not found' });
+        const newQuantity = sweet.quantity + quantityToAdd;
         const sql = `UPDATE sweets SET quantity = ? WHERE id = ?`;
         db.run(sql, [newQuantity, id], function(err) {
             if (err) return res.status(500).json({ error: 'Database error' });

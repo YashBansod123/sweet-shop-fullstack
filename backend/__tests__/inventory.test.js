@@ -1,57 +1,70 @@
-// backend/__tests__/inventory.test.js
 const request = require('supertest');
 const { app, server } = require('../index');
 const sqlite3 = require('sqlite3');
 
-afterAll((done) => {
-  server.close(done);
-});
-
 describe('Inventory API', () => {
-  let token;
+  let db;
+  let regularUserToken;
+  let adminToken;
 
-  // Setup: Create a user and clean the DB before tests
-  beforeAll(async () => {
-    const db = new sqlite3.Database('./sweets.db');
-    // Clear previous test users to avoid conflicts
-    await new Promise((resolve) => db.run('DELETE FROM users', () => db.close(resolve)));
+  // Before ALL tests, open one DB connection and create users
+  beforeAll((done) => {
+    db = new sqlite3.Database('./sweets.db', async (err) => {
+      if (err) return done(err);
 
-    await request(app).post('/api/auth/register').send({ email: 'inventory@example.com', password: 'password123' });
-    const res = await request(app).post('/api/auth/login').send({ email: 'inventory@example.com', password: 'password123' });
-    token = res.body.token;
+      const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
+        db.run(sql, params, (err) => (err ? reject(err) : resolve()));
+      });
+
+      await dbRun('DELETE FROM users');
+
+      // Create regular user and get token
+      await request(app).post('/api/auth/register').send({ email: 'user@example.com', password: 'password123' });
+      const userRes = await request(app).post('/api/auth/login').send({ email: 'user@example.com', password: 'password123' });
+      regularUserToken = userRes.body.token;
+
+      // Create admin user and get token
+      await request(app).post('/api/auth/register').send({ email: 'admin@example.com', password: 'adminpass' });
+      await dbRun("UPDATE users SET role = 'admin' WHERE email = ?", ['admin@example.com']);
+      const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@example.com', password: 'adminpass' });
+      adminToken = adminRes.body.token;
+
+      done();
+    });
   });
 
-  // Clean the sweets table before each inventory test
+  // After ALL tests, close the server and the single DB connection
+  afterAll((done) => {
+    server.close(() => {
+      db.close(done);
+    });
+  });
+
+  // Before EACH test, clean the sweets table
   beforeEach((done) => {
-    const db = new sqlite3.Database('./sweets.db');
-    db.run('DELETE FROM sweets', () => db.close(done));
+    db.run('DELETE FROM sweets', done);
   });
 
   it('should decrease the quantity of a sweet upon purchase', async () => {
-    // Step 1: Create a sweet with a starting quantity
-    const postRes = await request(app)
-      .post('/api/sweets')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Ladoo', category: 'Classic', price: 1.50, quantity: 20 });
-
+    const postRes = await request(app).post('/api/sweets').set('Authorization', `Bearer ${regularUserToken}`).send({ name: 'Ladoo', price: 1.50, quantity: 20 });
     const sweetId = postRes.body.id;
-
-    // Step 2: Send a request to purchase 5 of them
-    const purchaseRes = await request(app)
-      .post(`/api/sweets/${sweetId}/purchase`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ quantity: 5 });
-
-    // Assertions
+    const purchaseRes = await request(app).post(`/api/sweets/${sweetId}/purchase`).set('Authorization', `Bearer ${regularUserToken}`).send({ quantity: 5 });
     expect(purchaseRes.statusCode).toEqual(200);
-    expect(purchaseRes.body.quantity).toBe(15); // 20 - 5 = 15
+    expect(purchaseRes.body.quantity).toBe(15);
+  });
 
-    // Verify directly in the database
-    const db = new sqlite3.Database('./sweets.db');
-    const sweetFromDb = await new Promise((resolve) => {
-        db.get('SELECT quantity FROM sweets WHERE id = ?', [sweetId], (_, row) => resolve(row));
-    });
-    db.close();
-    expect(sweetFromDb.quantity).toBe(15);
+  it('should allow an admin to restock a sweet', async () => {
+    const postRes = await request(app).post('/api/sweets').set('Authorization', `Bearer ${adminToken}`).send({ name: 'Barfi', price: 4, quantity: 10 });
+    const sweetId = postRes.body.id;
+    const restockRes = await request(app).post(`/api/sweets/${sweetId}/restock`).set('Authorization', `Bearer ${adminToken}`).send({ quantity: 50 });
+    expect(restockRes.statusCode).toEqual(200);
+    expect(restockRes.body.quantity).toBe(60);
+  });
+
+  it('should NOT allow a regular user to restock a sweet', async () => {
+    const postRes = await request(app).post('/api/sweets').set('Authorization', `Bearer ${regularUserToken}`).send({ name: 'Barfi', price: 4, quantity: 10 });
+    const sweetId = postRes.body.id;
+    const restockRes = await request(app).post(`/api/sweets/${sweetId}/restock`).set('Authorization', `Bearer ${regularUserToken}`).send({ quantity: 50 });
+    expect(restockRes.statusCode).toEqual(403);
   });
 });

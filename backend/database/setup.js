@@ -8,11 +8,12 @@ const db = new sqlite3.Database('./sweets.db', (err) => {
 });
 
 db.serialize(() => {
-  // Create Users table
+  // Create Users table - THIS IS THE CORRECTED VERSION
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE,
-    password TEXT
+    password TEXT,
+    role TEXT DEFAULT 'user'
   )`, (err) => {
     if (err) console.error(err.message);
     else console.log("Users table created or already exists.");
