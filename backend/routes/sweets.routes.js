@@ -74,5 +74,22 @@ router.put('/:id', authMiddleware, (req, res) => {
     });
   });
 });
+
+router.delete('/:id', authMiddleware, (req, res) => {
+  const { id } = req.params;
+  const sql = `DELETE FROM sweets WHERE id = ?`;
+
+  db.run(sql, id, function(err) {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    // Check if a row was actually deleted
+    if (this.changes === 0) {
+      return res.status(404).json({ message: 'Sweet not found' });
+    }
+    res.status(200).json({ message: 'Sweet deleted successfully' });
+  });
+});
+
 });
 module.exports = router;

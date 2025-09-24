@@ -143,4 +143,34 @@ it('should update an existing sweet', async () => {
   db.close();
   expect(sweetFromDb.price).toBe(updatedData.price);
 });
+
+it('should delete an existing sweet', async () => {
+  // Setup: Create a sweet so we have something to delete
+  const postRes = await request(app)
+    .post('/api/sweets')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Barfi', category: 'Milk-based', price: 4.00, quantity: 40 });
+
+  const sweetId = postRes.body.id;
+
+  // Action: Send a DELETE request
+  const res = await request(app)
+    .delete(`/api/sweets/${sweetId}`)
+    .set('Authorization', `Bearer ${token}`);
+
+  // Assertion for the response
+  expect(res.statusCode).toEqual(200);
+  expect(res.body.message).toBe('Sweet deleted successfully');
+
+  // Verification: Check the database to make sure it's gone
+  const db = new sqlite3.Database('./sweets.db');
+  const sweetFromDb = await new Promise((resolve, reject) => {
+    db.get('SELECT * FROM sweets WHERE id = ?', [sweetId], (err, row) => {
+      if (err) reject(err);
+      resolve(row);
+    });
+  });
+  db.close();
+  expect(sweetFromDb).toBeUndefined(); // It should not exist
+});
 });
