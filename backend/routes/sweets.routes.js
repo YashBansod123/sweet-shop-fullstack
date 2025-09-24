@@ -4,13 +4,12 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth.middleware');
 const sqlite3 = require('sqlite3');
 
-// Connect to the database
 const db = new sqlite3.Database('./sweets.db');
 
+// POST /api/sweets - Add a new sweet
 router.post('/', authMiddleware, (req, res) => {
   const { name, category, price, quantity } = req.body;
 
-  // Basic validation
   if (!name || !price || !quantity) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -21,7 +20,6 @@ router.post('/', authMiddleware, (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
-    // Respond with the newly created sweet object, including its new ID
     res.status(201).json({
       id: this.lastID,
       name,
@@ -31,5 +29,19 @@ router.post('/', authMiddleware, (req, res) => {
     });
   });
 });
+
+// --- Add this new route ---
+// GET /api/sweets - Get all sweets
+router.get('/', authMiddleware, (req, res) => {
+  const sql = `SELECT * FROM sweets`;
+
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.status(200).json(rows);
+  });
+});
+// -------------------------
 
 module.exports = router;

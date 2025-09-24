@@ -61,4 +61,28 @@ describe('Sweets API', () => {
     expect(sweetFromDb.name).toBe(newSweet.name);
     expect(sweetFromDb.quantity).toBe(newSweet.quantity);
   });
+  // Add this new 'it' block inside your describe block
+
+it('should return a list of all sweets for an authenticated user', async () => {
+  // First, create a couple of sweets to ensure the database isn't empty
+  await request(app)
+    .post('/api/sweets')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Jalebi', category: 'Classic', price: 2.50, quantity: 100 });
+
+  await request(app)
+    .post('/api/sweets')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Rasgulla', category: 'Syrup-based', price: 3.00, quantity: 50 });
+
+  // Now, try to get the list
+  const res = await request(app)
+    .get('/api/sweets')
+    .set('Authorization', `Bearer ${token}`);
+
+  expect(res.statusCode).toEqual(200);
+  expect(Array.isArray(res.body)).toBe(true);
+  expect(res.body.length).toBe(2);
+  expect(res.body[0].name).toBe('Jalebi');
+});
 });
