@@ -83,4 +83,45 @@ export const purchaseSweet = async (sweetId) => {
   }
 };
 
+
+export const deleteSweet = async (sweetId) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+
+    const response = await apiClient.delete(`/sweets/${sweetId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+export const getSweetById = async (sweetId) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+    const response = await apiClient.get(`/sweets/${sweetId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
+export const updateSweet = async (sweetId, sweetData) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+    const response = await apiClient.put(`/sweets/${sweetId}`, sweetData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
 // You will add more functions here later (e.g., getSweets, purchaseSweet)

@@ -116,4 +116,14 @@ router.delete('/:id', authMiddleware, (req, res) => {
     });
 });
 
+// GET /api/sweets/:id - Get a single sweet by ID
+router.get('/:id', authMiddleware, (req, res) => {
+  const { id } = req.params;
+  db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (!row) return res.status(404).json({ error: 'Sweet not found' });
+    res.status(200).json(row);
+  });
+});
+
 module.exports = router;

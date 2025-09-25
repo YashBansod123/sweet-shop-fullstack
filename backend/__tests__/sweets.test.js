@@ -173,4 +173,14 @@ it('should delete an existing sweet', async () => {
   db.close();
   expect(sweetFromDb).toBeUndefined(); // It should not exist
 });
+it('should return a single sweet by its ID', async () => {
+  const postRes = await request(app).post('/api/sweets').set('Authorization', `Bearer ${token}`).send({ name: 'Test Sweet', category: 'Testing', price: 1.00, quantity: 10 });
+  const sweetId = postRes.body.id;
+
+  const getRes = await request(app).get(`/api/sweets/${sweetId}`).set('Authorization', `Bearer ${token}`);
+
+  expect(getRes.statusCode).toEqual(200);
+  expect(getRes.body.id).toBe(sweetId);
+  expect(getRes.body.name).toBe('Test Sweet');
+});
 });
