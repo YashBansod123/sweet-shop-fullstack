@@ -1,20 +1,17 @@
 const request = require('supertest');
 const { app, server } = require('../index');
-const sqlite3 = require('sqlite3');
+const db = require('../db'); // Use our new PostgreSQL connection pool
 
-// This block runs after all tests are finished
 afterAll((done) => {
-  server.close(done); // Close the server to prevent hanging
+  server.close(() => {
+    db.pool.end(done); // Close the PostgreSQL pool
+  });
 });
 
 describe('Auth Endpoints', () => {
-  // This block runs BEFORE EACH test
-  beforeEach((done) => {
-    const db = new sqlite3.Database('./sweets.db');
-    // Delete all users to ensure a clean slate for every test
-    db.run('DELETE FROM users', () => {
-      db.close(done);
-    });
+  // Before each test, wipe the users table
+  beforeEach(async () => {
+    await db.query('DELETE FROM users');
   });
 
   it('should register a new user successfully', async () => {
@@ -34,14 +31,9 @@ describe('Auth Endpoints', () => {
       .post('/api/auth/register')
       .send({ email, password });
 
-    const db = new sqlite3.Database('./sweets.db');
-    const user = await new Promise((resolve, reject) => {
-      db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
-        if (err) reject(err);
-        resolve(row);
-      });
-    });
-    db.close();
+    // Verify by querying the PostgreSQL database
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
 
     expect(user).toBeDefined();
     expect(user.email).toBe(email);

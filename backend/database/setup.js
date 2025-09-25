@@ -1,40 +1,37 @@
 // backend/database/setup.js
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./sweets.db', (err) => {
-  if (err) {
-    console.error(err.message);
+const { query, pool } = require('../db');
+
+async function setupDatabase() {
+  const createUsersTableQuery = `
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      role VARCHAR(50) DEFAULT 'user'
+    );
+  `;
+
+  const createSweetsTableQuery = `
+    CREATE TABLE IF NOT EXISTS sweets (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      category VARCHAR(100),
+      price DECIMAL(10, 2) NOT NULL,
+      quantity INTEGER NOT NULL
+    );
+  `;
+
+  try {
+    console.log('Creating tables...');
+    await query(createUsersTableQuery);
+    await query(createSweetsTableQuery);
+    console.log('Tables created successfully or already exist.');
+  } catch (err) {
+    console.error('Error setting up database:', err);
+  } finally {
+    await pool.end();
+    console.log('Database setup complete.');
   }
-  console.log('Connected to the sweets database.');
-});
+}
 
-db.serialize(() => {
-  // Create Users table - THIS IS THE CORRECTED VERSION
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE,
-    password TEXT,
-    role TEXT DEFAULT 'user'
-  )`, (err) => {
-    if (err) console.error(err.message);
-    else console.log("Users table created or already exists.");
-  });
-
-  // Create Sweets table
-  db.run(`CREATE TABLE IF NOT EXISTS sweets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    category TEXT,
-    price REAL NOT NULL,
-    quantity INTEGER NOT NULL
-  )`, (err) => {
-    if (err) console.error(err.message);
-    else console.log("Sweets table created or already exists.");
-  });
-});
-
-db.close((err) => {
-  if (err) {
-    console.error(err.message);
-  }
-  console.log('Closed the database connection.');
-});
+setupDatabase();

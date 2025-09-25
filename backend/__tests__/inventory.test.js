@@ -1,48 +1,39 @@
 const request = require('supertest');
 const { app, server } = require('../index');
-const sqlite3 = require('sqlite3');
+const db = require('../db'); // Use our PostgreSQL connection
+
+let regularUserToken;
+let adminToken;
+
+// Before all tests, set up our users and tokens
+beforeAll(async () => {
+  // Clean the database
+  await db.query('DELETE FROM users');
+  await db.query('DELETE FROM sweets');
+
+  // Create a regular user and get their token
+  await request(app).post('/api/auth/register').send({ email: 'user@example.com', password: 'password123' });
+  const userRes = await request(app).post('/api/auth/login').send({ email: 'user@example.com', password: 'password123' });
+  regularUserToken = userRes.body.token;
+
+  // Create an admin user and get their token
+  await request(app).post('/api/auth/register').send({ email: 'admin@example.com', password: 'adminpass' });
+  await db.query("UPDATE users SET role = 'admin' WHERE email = $1", ['admin@example.com']);
+  const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@example.com', password: 'adminpass' });
+  adminToken = adminRes.body.token;
+});
+
+// After all tests are done, close the server and database connection
+afterAll((done) => {
+  server.close(() => {
+    db.pool.end(done);
+  });
+});
 
 describe('Inventory API', () => {
-  let db;
-  let regularUserToken;
-  let adminToken;
-
-  // Before ALL tests, open one DB connection and create users
-  beforeAll((done) => {
-    db = new sqlite3.Database('./sweets.db', async (err) => {
-      if (err) return done(err);
-
-      const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-        db.run(sql, params, (err) => (err ? reject(err) : resolve()));
-      });
-
-      await dbRun('DELETE FROM users');
-
-      // Create regular user and get token
-      await request(app).post('/api/auth/register').send({ email: 'user@example.com', password: 'password123' });
-      const userRes = await request(app).post('/api/auth/login').send({ email: 'user@example.com', password: 'password123' });
-      regularUserToken = userRes.body.token;
-
-      // Create admin user and get token
-      await request(app).post('/api/auth/register').send({ email: 'admin@example.com', password: 'adminpass' });
-      await dbRun("UPDATE users SET role = 'admin' WHERE email = ?", ['admin@example.com']);
-      const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@example.com', password: 'adminpass' });
-      adminToken = adminRes.body.token;
-
-      done();
-    });
-  });
-
-  // After ALL tests, close the server and the single DB connection
-  afterAll((done) => {
-    server.close(() => {
-      db.close(done);
-    });
-  });
-
-  // Before EACH test, clean the sweets table
-  beforeEach((done) => {
-    db.run('DELETE FROM sweets', done);
+  // Before each individual test, make sure the sweets table is empty
+  beforeEach(async () => {
+    await db.query('DELETE FROM sweets');
   });
 
   it('should decrease the quantity of a sweet upon purchase', async () => {

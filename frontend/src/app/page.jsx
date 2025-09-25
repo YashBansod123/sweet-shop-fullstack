@@ -112,7 +112,7 @@ export default function DashboardPage() {
                 </h2>
                 <p className="text-gray-700 mb-1">Category: {sweet.category}</p>
                 <p className="text-gray-800 font-semibold mb-2">
-                  Price: ${sweet.price.toFixed(2)}
+                  Price: ${parseFloat(sweet.price).toFixed(2)}
                 </p>
                 <p className="text-gray-800 font-semibold mb-4">
                   In Stock: {sweet.quantity}

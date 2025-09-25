@@ -3,127 +3,125 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth.middleware');
 const adminMiddleware = require('../middleware/admin.middleware');
-const sqlite3 = require('sqlite3');
-
-const db = new sqlite3.Database('./sweets.db');
+const db = require('../db');
 
 // POST /api/sweets
-router.post('/', authMiddleware, (req, res) => {
-  const { name, category, price, quantity } = req.body;
-  if (!name || !price || !quantity) {
-    return res.status(400).json({ error: 'Missing required fields' });
+router.post('/', authMiddleware, async (req, res) => {
+  try {
+    const { name, category, price, quantity } = req.body;
+    if (!name || !price || !quantity) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    const sql = `INSERT INTO sweets (name, category, price, quantity) VALUES ($1, $2, $3, $4) RETURNING *`;
+    const result = await db.query(sql, [name, category, price, quantity]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while creating sweet' });
   }
-  db.serialize(() => {
-    const sql = `INSERT INTO sweets (name, category, price, quantity) VALUES (?, ?, ?, ?)`;
-    db.run(sql, [name, category, price, quantity], function(err) {
-      if (err) return res.status(500).json({ error: 'Database error' });
-      res.status(201).json({ id: this.lastID, name, category, price, quantity });
-    });
-  });
 });
 
 // GET /api/sweets
-router.get('/', authMiddleware, (req, res) => {
-  db.serialize(() => {
-    const sql = `SELECT * FROM sweets`;
-    db.all(sql, [], (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Database error' });
-      res.status(200).json(rows);
-    });
-  });
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM sweets ORDER BY id');
+    res.status(200).json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while fetching sweets' });
+  }
 });
 
 // GET /api/sweets/search
-router.get('/search', authMiddleware, (req, res) => {
-  const { name } = req.query;
-  db.serialize(() => {
-    const sql = `SELECT * FROM sweets WHERE name LIKE ?`;
-    const params = [`%${name}%`];
-    db.all(sql, params, (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Database error' });
-      res.status(200).json(rows);
-    });
-  });
+router.get('/search', authMiddleware, async (req, res) => {
+  try {
+    const { name } = req.query;
+    const sql = `SELECT * FROM sweets WHERE name ILIKE $1`; // ILIKE is case-insensitive
+    const result = await db.query(sql, [`%${name}%`]);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while searching' });
+  }
+});
+
+// GET /api/sweets/:id
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query('SELECT * FROM sweets WHERE id = $1', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Sweet not found' });
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while fetching sweet' });
+  }
 });
 
 // POST /api/sweets/:id/purchase
-router.post('/:id/purchase', authMiddleware, (req, res) => {
+router.post('/:id/purchase', authMiddleware, async (req, res) => {
+  try {
     const { id } = req.params;
     const { quantity: quantityToPurchase } = req.body;
-    db.serialize(() => {
-        db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, sweet) => {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            if (!sweet) return res.status(404).json({ error: 'Sweet not found' });
-            if (sweet.quantity < quantityToPurchase) {
-                return res.status(400).json({ error: 'Not enough stock' });
-            }
-            const newQuantity = sweet.quantity - quantityToPurchase;
-            const sql = `UPDATE sweets SET quantity = ? WHERE id = ?`;
-            db.run(sql, [newQuantity, id], function(err) {
-                if (err) return res.status(500).json({ error: 'Database error' });
-                res.status(200).json({ ...sweet, quantity: newQuantity });
-            });
-        });
-    });
+
+    const sweetResult = await db.query('SELECT * FROM sweets WHERE id = $1', [id]);
+    if (sweetResult.rows.length === 0) return res.status(404).json({ error: 'Sweet not found' });
+    
+    const sweet = sweetResult.rows[0];
+    if (sweet.quantity < quantityToPurchase) {
+      return res.status(400).json({ error: 'Not enough stock' });
+    }
+
+    const newQuantity = sweet.quantity - quantityToPurchase;
+    const updateSql = `UPDATE sweets SET quantity = $1 WHERE id = $2 RETURNING *`;
+    const updatedResult = await db.query(updateSql, [newQuantity, id]);
+    res.status(200).json(updatedResult.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error during purchase' });
+  }
 });
 
 // POST /api/sweets/:id/restock
-router.post('/:id/restock', [authMiddleware, adminMiddleware], (req, res) => {
+router.post('/:id/restock', [authMiddleware, adminMiddleware], async (req, res) => {
+  try {
     const { id } = req.params;
     const { quantity: quantityToAdd } = req.body;
-    db.serialize(() => {
-        db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, sweet) => {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            if (!sweet) return res.status(404).json({ error: 'Sweet not found' });
-            const newQuantity = sweet.quantity + quantityToAdd;
-            const sql = `UPDATE sweets SET quantity = ? WHERE id = ?`;
-            db.run(sql, [newQuantity, id], function(err) {
-                if (err) return res.status(500).json({ error: 'Database error' });
-                res.status(200).json({ ...sweet, quantity: newQuantity });
-            });
-        });
-    });
+
+    const sweetResult = await db.query('SELECT * FROM sweets WHERE id = $1', [id]);
+    if (sweetResult.rows.length === 0) return res.status(404).json({ error: 'Sweet not found' });
+
+    const sweet = sweetResult.rows[0];
+    const newQuantity = sweet.quantity + quantityToAdd;
+    const updateSql = `UPDATE sweets SET quantity = $1 WHERE id = $2 RETURNING *`;
+    const updatedResult = await db.query(updateSql, [newQuantity, id]);
+    res.status(200).json(updatedResult.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error during restock' });
+  }
 });
 
 // PUT /api/sweets/:id
-router.put('/:id', authMiddleware, (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
     const { price, quantity } = req.body;
     const { id } = req.params;
-    db.serialize(() => {
-        const sql = `UPDATE sweets SET price = ?, quantity = ? WHERE id = ?`;
-        db.run(sql, [price, quantity, id], function(err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, row) => {
-                if (err) return res.status(500).json({ error: 'Database error' });
-                res.status(200).json(row);
-            });
-        });
-    });
+    const sql = `UPDATE sweets SET price = $1, quantity = $2 WHERE id = $3 RETURNING *`;
+    const result = await db.query(sql, [price, quantity, id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Sweet not found' });
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while updating' });
+  }
 });
 
 // DELETE /api/sweets/:id
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
     const { id } = req.params;
-    db.serialize(() => {
-        const sql = `DELETE FROM sweets WHERE id = ?`;
-        db.run(sql, id, function(err) {
-            if (err) return res.status(500).json({ error: 'Database error' });
-            if (this.changes === 0) {
-                return res.status(404).json({ message: 'Sweet not found' });
-            }
-            res.status(200).json({ message: 'Sweet deleted successfully' });
-        });
-    });
-});
-
-// GET /api/sweets/:id - Get a single sweet by ID
-router.get('/:id', authMiddleware, (req, res) => {
-  const { id } = req.params;
-  db.get('SELECT * FROM sweets WHERE id = ?', [id], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
-    if (!row) return res.status(404).json({ error: 'Sweet not found' });
-    res.status(200).json(row);
-  });
+    const result = await db.query('DELETE FROM sweets WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Sweet not found' });
+    }
+    res.status(200).json({ message: 'Sweet deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while deleting' });
+  }
 });
 
 module.exports = router;
