@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db'); // Use our new PostgreSQL connection
 
-const JWT_SECRET = 'your-super-secret-key-that-is-long-and-random';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // User Registration
 router.post('/register', async (req, res) => {

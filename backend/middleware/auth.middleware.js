@@ -1,6 +1,6 @@
 // backend/middleware/auth.middleware.js
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = 'your-super-secret-key-that-is-long-and-random'; // Make sure this is the same secret as in your auth routes
+const JWT_SECRET = process.env.JWT_SECRET; // Make sure this is the same secret as in your auth routes
 
 module.exports = function(req, res, next) {
   // Get token from header

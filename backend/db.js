@@ -2,11 +2,8 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'sweet_shop',
-  password: 'Yashba598@123', // <-- IMPORTANT: Put your PostgreSQL password here
-  port: 5432,
+  // This single line reads the entire connection string from your .env file
+  connectionString: process.env.DATABASE_URL,
 });
 
 module.exports = {
