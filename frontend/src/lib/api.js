@@ -63,4 +63,24 @@ export const addSweet = async (sweetData) => {
   }
 };
 
+export const purchaseSweet = async (sweetId) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+
+    const response = await apiClient.post(
+      `/sweets/${sweetId}/purchase`,
+      { quantity: 1 }, // We'll purchase one at a time
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
 // You will add more functions here later (e.g., getSweets, purchaseSweet)
