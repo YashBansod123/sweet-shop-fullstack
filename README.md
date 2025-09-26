@@ -1,4 +1,8 @@
 
+<img width="1920" height="1080" alt="Screenshot (463)" src="https://github.com/user-attachments/assets/e19038f8-517c-4217-bcce-5a5daa050c14" />
+<img width="1920" height="1080" alt="Screenshot (462)" src="https://github.com/user-attachments/assets/073e28ce-2802-45fc-8e40-86c2c3d20571" />
+<img width="1920" height="1080" alt="Screenshot (464)" src="https://github.com/user-attachments/assets/e35722f7-67da-499d-99ab-e31917b3de05" />
+<img width="1920" height="1080" alt="Screenshot (465)" src="https://github.com/user-attachments/assets/c9fe9ad0-891a-4436-8a05-069dcec8cc2b" />
 # AI Kata: Sweet Shop Management System
 
 This is a full-stack application for managing a sweet shop's inventory, built as a technical assessment for Incubyte. It features a complete backend API built with Node.js and PostgreSQL, and a modern, interactive frontend built with Next.js. The entire project was developed following a strict Test-Driven Development (TDD) workflow.
