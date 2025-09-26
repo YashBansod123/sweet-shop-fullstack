@@ -71,7 +71,7 @@ npm install
 npm run dev
 
 
-## My AI Usage
+# My AI Usage
 AI Tools Used: Gemini (by Google)
 
 How I Used It: I used Gemini as an interactive, conversational pair-programming partner for the entire project lifecycle.
