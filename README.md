@@ -85,8 +85,3 @@ Best Practices: It introduced and provided code for best practices like using .e
 
 My Reflection: Working with an AI partner was incredibly efficient. It allowed me to focus on understanding the flow and logic of TDD and full-stack development without getting stuck on minor syntax errors. It was like having a senior developer guiding me brick-by-brick, providing code snippets and explaining complex concepts in real-time.
 
-<img width="1920" height="1080" alt="Screenshot (463)" src="https://github.com/user-attachments/assets/e19038f8-517c-4217-bcce-5a5daa050c14" />
-<img width="1920" height="1080" alt="Screenshot (462)" src="https://github.com/user-attachments/assets/073e28ce-2802-45fc-8e40-86c2c3d20571" />
-<img width="1920" height="1080" alt="Screenshot (464)" src="https://github.com/user-attachments/assets/e35722f7-67da-499d-99ab-e31917b3de05" />
-<img width="1920" height="1080" alt="Screenshot (465)" src="https://github.com/user-attachments/assets/c9fe9ad0-891a-4436-8a05-069dcec8cc2b" />
-
