@@ -1,4 +1,5 @@
-// backend/database/setup.js
+require('dotenv').config(); // <-- THIS IS THE FIX
+
 const { query, pool } = require('../db');
 
 async function setupDatabase() {
@@ -21,11 +22,33 @@ async function setupDatabase() {
     );
   `;
 
+  const createCartsTableQuery = `
+    CREATE TABLE IF NOT EXISTS carts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER UNIQUE NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `;
+
+  const createCartItemsTableQuery = `
+    CREATE TABLE IF NOT EXISTS cart_items (
+      id SERIAL PRIMARY KEY,
+      cart_id INTEGER NOT NULL,
+      sweet_id INTEGER NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
+      FOREIGN KEY (sweet_id) REFERENCES sweets(id) ON DELETE CASCADE
+    );
+  `;
+
   try {
     console.log('Creating tables...');
     await query(createUsersTableQuery);
     await query(createSweetsTableQuery);
-    console.log('Tables created successfully or already exist.');
+    await query(createCartsTableQuery);
+    await query(createCartItemsTableQuery);
+    console.log('All tables created successfully or already exist.');
   } catch (err) {
     console.error('Error setting up database:', err);
   } finally {
