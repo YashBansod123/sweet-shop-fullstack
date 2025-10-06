@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { jwtDecode } from "jwt-decode";
-import { getSweets, purchaseSweet, deleteSweet } from "../lib/api";
+import { getSweets, addToCart, deleteSweet } from "../lib/api";
 
 export default function DashboardPage() {
   const [sweets, setSweets] = useState([]);
@@ -65,6 +65,14 @@ export default function DashboardPage() {
       }
     }
   };
+  const handleAddToCart = async (sweetId) => {
+    try {
+      await addToCart(sweetId, 1); // Add one item
+      alert("Added to cart!");
+    } catch (err) {
+      alert("Failed to add to cart.");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -120,13 +128,13 @@ export default function DashboardPage() {
               </div>
               <div className="space-y-2 mt-4">
                 <button
-                  onClick={() => handlePurchase(sweet.id)}
+                  onClick={() => handleAddToCart(sweet.id)} // Change this
                   disabled={sweet.quantity === 0}
-                  className="w-full bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 disabled:bg-gray-400"
+                  className="w-full bg-pink-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-pink-600 disabled:bg-gray-400"
                 >
-                  Purchase
+                  Add to Cart
                 </button>
-                
+
                 {user?.role === "admin" && (
                   <Link
                     href={`/admin/edit-sweet/${sweet.id}`}

@@ -75,4 +75,32 @@ it('should update the quantity of an item in the cart', async () => {
   expect(updateRes.statusCode).toEqual(200);
   expect(updateRes.body.quantity).toBe(5);
 });
+it('should remove an item from the cart', async () => {
+  // Setup Step 1: Create a sweet
+  const sweetResult = await db.query(
+    "INSERT INTO sweets (name, category, price, quantity) VALUES ('Test Barfi', 'Test', 4.00, 20) RETURNING id"
+  );
+  const sweetId = sweetResult.rows[0].id;
+
+  // Setup Step 2: Add the sweet to the cart to create a cart item
+  const addRes = await request(app)
+    .post('/api/cart/items')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ sweetId: sweetId, quantity: 2 });
+
+  const cartItemId = addRes.body.id;
+
+  // Action: Send a DELETE request to remove the item
+  const deleteRes = await request(app)
+    .delete(`/api/cart/items/${cartItemId}`)
+    .set('Authorization', `Bearer ${token}`);
+
+  // Assertions
+  expect(deleteRes.statusCode).toEqual(200);
+  expect(deleteRes.body.message).toBe('Item removed from cart');
+
+  // Verification: Check the database to make sure it's gone
+  const verifyResult = await db.query('SELECT * FROM cart_items WHERE id = $1', [cartItemId]);
+  expect(verifyResult.rows.length).toBe(0);
+});
 });
