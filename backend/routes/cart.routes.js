@@ -67,5 +67,34 @@ router.post('/items', authMiddleware, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
+// PUT /api/cart/items/:itemId - Update an item's quantity
+router.put('/items/:itemId', authMiddleware, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { quantity } = req.body;
+    const userId = req.user.id;
+
+    // Security check: Ensure the item belongs to the user's cart
+    const itemResult = await db.query(
+      `SELECT ci.* FROM cart_items ci JOIN carts c ON ci.cart_id = c.id WHERE ci.id = $1 AND c.user_id = $2`,
+      [itemId, userId]
+    );
+
+    if (itemResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Cart item not found or you do not have permission to edit it.' });
+    }
+
+    // Update the quantity
+    const updateResult = await db.query(
+      'UPDATE cart_items SET quantity = $1 WHERE id = $2 RETURNING *',
+      [quantity, itemId]
+    );
+
+    res.status(200).json(updateResult.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 module.exports = router;
